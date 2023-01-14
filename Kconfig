@@ -1,8 +1,6 @@
 #
 #
 
-# Where is USB_PID_CONSOLE_SAMPLE defined?
-
 config USB_DEVICE_PID
 	default USB_PID_CONSOLE_SAMPLE
 
