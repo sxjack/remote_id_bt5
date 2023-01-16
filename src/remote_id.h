@@ -45,7 +45,7 @@
 #define SPEKTRUM          0
 #define REQ_SATS          8 // 8 for real use, 5 for indoor testing.
 
-#define ID_JAPAN          1
+#define ID_JAPAN          0
 
 void      txt_message(const char *);   // Packages the message into a NMEA TXT.
 void      txt_message(const char *,const int,const int,const int);
