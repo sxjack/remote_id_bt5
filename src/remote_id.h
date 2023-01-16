@@ -36,15 +36,24 @@
 
 #define EU_CATEGORY       ODID_CATEGORY_EU_SPECIFIC  // ODID_CATEGORY_EU_UNDECLARED
 
+#define AUTH_KEY          "0123456789abcdef"
+#define AUTH_IV           "nopqrs"
+
 #define DONGLE            0
 #define GPS_PASSTHROUGH   1
 #define TXT_BOTH_PORTS    0 // Sends error messages to both the serial and USB ports.
 #define SPEKTRUM          0
-#define REQ_SATS          5 // 8 for real use, 5 for indoor testing.
+#define REQ_SATS          8 // 8 for real use, 5 for indoor testing.
+
+#define ID_JAPAN          1
 
 void      txt_message(const char *);   // Packages the message into a NMEA TXT.
 void      txt_message(const char *,const int,const int,const int);
 void      debug_message(const char *);
+int       crypto_init(uint8_t *);
+#if ID_JAPAN
+int       auth_japan(ODID_Message_encoded *,uint8_t *);
+#endif
 
 #ifdef __cplusplus
 extern "C" {

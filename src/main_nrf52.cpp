@@ -38,7 +38,8 @@
 //
 static const char                 uav_operator[] = UAV_OPERATOR,
                                   uav_id[]       = UAV_ID,
-                                  self_id[]      = SELF_ID;
+                                  self_id[]      = SELF_ID,
+                                 *program_name   = "Remote ID";
 static const ODID_uatype_t        ua_type        = UA_TYPE;
 static const ODID_category_EU_t   category       = EU_CATEGORY;
 
@@ -109,6 +110,12 @@ int main(void) {
   spektrum.begin();
 #endif
 
+#if ID_JAPAN
+  crypto_init((uint8_t *) AUTH_KEY);
+#endif
+
+  txt_message(program_name);
+  
   // Main loop.
   
   while (1) {
@@ -131,6 +138,7 @@ int main(void) {
       unix_secs = alt_unix_secs(gps.utc.tm_year + 1900,gps.utc.tm_mon + 1,
                                 gps.utc.tm_mday,gps.utc.tm_hour,gps.utc.tm_min,gps.utc.tm_sec);
 #endif
+      UAS_data.Auth[0].Timestamp  =
       UAS_data.System.Timestamp   = (unix_secs > odid_datum)? (unix_secs - odid_datum): 0;
     }
 
@@ -164,7 +172,7 @@ int main(void) {
       UAS_data.Location.Status    = ODID_STATUS_REMOTE_ID_SYSTEM_FAILURE;
     }
 
-    if ((!base_set)&&(gps.fix)&&(gps.satellites >= REQ_SATS)) {
+    if ((!base_set)&&(gps.fix)&&(gps.satellites >= 8)) { // REQ_SATS
 
       UAS_data.System.OperatorLatitude    = gps.latitude_d;
       UAS_data.System.OperatorLongitude   = gps.longitude_d;
@@ -193,7 +201,8 @@ int main(void) {
 
     if ((!build_report)&&(uptime > 20000)) {
 
-      sprintf(text,"Remote ID %s, %d dbm",__DATE__,(int) ext_adv_info.tx_power);
+      sprintf(text,"%s %s, %d dbm",
+              program_name,__DATE__,(int) ext_adv_info.tx_power);
       txt_message(text);
 
       build_report = 1;
@@ -272,10 +281,18 @@ static void init_odid(const char *uav_op,const char *uav,const char *self) {
   UAS_data.BasicID[0].UAType =
   UAS_data.BasicID[1].UAType = ua_type;
 
+#if ID_JAPAN
+  UAS_data.BasicID[0].IDType = ODID_IDTYPE_SERIAL_NUMBER;
+  strncpy(UAS_data.BasicID[0].UASID,uav,ODID_ID_SIZE);
+
+  UAS_data.BasicID[1].IDType = ODID_IDTYPE_CAA_REGISTRATION_ID;
+  strncpy(UAS_data.BasicID[1].UASID,uav_op,ODID_ID_SIZE);
+#else
   if (uav[0]) {
     UAS_data.BasicID[0].IDType = ODID_IDTYPE_SERIAL_NUMBER;
     strncpy(UAS_data.BasicID[0].UASID,uav,ODID_ID_SIZE);
   }
+#endif
 
   location->Status             = ODID_STATUS_UNDECLARED;
   location->Direction          = INV_DIR;

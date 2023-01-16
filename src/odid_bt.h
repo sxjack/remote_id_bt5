@@ -26,45 +26,42 @@
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/uuid.h>
 
-#define PACK_MESSAGES 0 // TO DO.
-
 //
 
 class RID_open {
 
  public:
 
-                           RID_open();
-                           int                      begin(const struct gpio_dt_spec *,const char *,ODID_UAS_Data *,
-                                                          struct bt_le_ext_adv_info *);
-  int                      foreground(ODID_UAS_Data *);
+                            RID_open();
+  int                       begin(const struct gpio_dt_spec *,const char *,ODID_UAS_Data *,
+                                  struct bt_le_ext_adv_info *);
+  int                       foreground(ODID_UAS_Data *);
 
   // These are public for debugging.
-  int                      bt4_ad_phase = 0, bt5_ad_phase = 0;
-  uint8_t                  msg_counter[16];
-  uint32_t                 counter_4 = 0, counter_5 = 0;
+  int                       bt4_ad_phase = 0, bt5_ad_phase = 0;
+  uint8_t                   msg_counter[16];
+  uint32_t                  counter_4 = 0, counter_5 = 0;
 
  private:
 
-  int                      update_message(int *,ODID_UAS_Data *UAS_data);
+  int                       update_message(int *,ODID_UAS_Data *UAS_data);
 
-  int                      ext_records = 0;
-#if PACK_MESSAGES
-  uint8_t                  pack_buffer[256];
-#endif
-  uint8_t                 *odid_enc_bt4, *odid_seq_bt4, bt4_adv_buffer[36];
-  uint32_t                 last_bt4_advert = 0, last_bt5_advert = 0;
-  struct gpio_dt_spec     *status_led;
-  struct bt_le_adv_param   bt4_adv_param, bt5_adv_param;
-  struct bt_data           bt4_data[2], bt5_data[5];         
-  struct bt_le_ext_adv    *bt5_advert;
+  int                       ext_records = 0;
+  uint8_t                   pack_buffer[256];
+  uint8_t                  *odid_enc_bt4, *odid_seq_bt4, bt4_adv_buffer[36], *odid_seq_bt5;
+  uint32_t                  last_bt4_advert = 0, last_bt5_advert = 0;
+  struct gpio_dt_spec      *status_led;
+  struct bt_le_adv_param    bt4_adv_param, bt5_adv_param;
+  struct bt_data            bt4_data[2], bt5_data[5];         
+  struct bt_le_ext_adv     *bt5_advert;
 
-  ODID_BasicID_encoded    basicID_enc[2];
-  ODID_Location_encoded   location_enc;
-  ODID_System_encoded     system_enc;
-  ODID_OperatorID_encoded operatorID_enc;
-  ODID_SelfID_encoded     selfID_enc;
-  ODID_Auth_encoded       auth_enc[2];
+  ODID_Message_encoded     *pack_encoded   =  NULL;
+  ODID_BasicID_encoded     *basicID_enc[2] = {NULL, NULL};
+  ODID_Location_encoded    *location_enc   =  NULL;
+  ODID_System_encoded      *system_enc     =  NULL;
+  ODID_OperatorID_encoded  *operatorID_enc =  NULL;
+  ODID_SelfID_encoded      *selfID_enc     =  NULL;
+  ODID_Auth_encoded        *auth_enc[2]    = {NULL, NULL};
 };
 
 #endif

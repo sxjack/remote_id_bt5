@@ -24,7 +24,11 @@
 #define ENABLE_BT5      1
 
 #define BT4_INT       190 // msecs, delays between messages.
+#if ID_JAPAN              // Pack.
+#define BT5_INT       470
+#else                     // Individual messages.
 #define BT5_INT       170
+#endif
 
 /*
  *
@@ -48,20 +52,34 @@ int RID_open::begin(const struct gpio_dt_spec *led,const char *name,ODID_UAS_Dat
 
   //
 
-  encodeBasicIDMessage(&basicID_enc[0],&UAS_data->BasicID[0]);
-  encodeBasicIDMessage(&basicID_enc[1],&UAS_data->BasicID[1]);
-  encodeOperatorIDMessage(&operatorID_enc,&UAS_data->OperatorID);
-  encodeSelfIDMessage(&selfID_enc,&UAS_data->SelfID);
-#if 1
-  memset(&location_enc,0,sizeof(location_enc));
-  memset(&system_enc,  0,sizeof(system_enc));
-#else
-  encodeLocationMessage(&location_enc,&UAS_data->Location);
-  encodeSystemMessage(&system_enc,&UAS_data->System);
-#endif
-  memset(auth_enc,0,sizeof(auth_enc));
-#if PACK_MESSAGES
   memset(pack_buffer,0,sizeof(pack_buffer));
+
+  pack_buffer[0] = 0xfa;
+  pack_buffer[1] = 0xff;
+  pack_buffer[2] = 0x0d;
+  odid_seq_bt5   = &pack_buffer[3];
+  pack_buffer[4] = (ODID_MESSAGETYPE_PACKED << 4) | 0x02;
+  pack_buffer[5] =  ODID_MESSAGE_SIZE;
+  pack_buffer[6] = 7;
+  pack_encoded   = (ODID_Message_encoded *)    &pack_buffer[7];
+  // The order is for ID_JAPAN. Different orders would require a #define block.
+  basicID_enc[0] = (ODID_BasicID_encoded *)    &pack_encoded[j = 0];
+  basicID_enc[1] = (ODID_BasicID_encoded *)    &pack_encoded[++j];
+  location_enc   = (ODID_Location_encoded *)   &pack_encoded[++j];
+  auth_enc[0]    = (ODID_Auth_encoded *)       &pack_encoded[++j];
+  system_enc     = (ODID_System_encoded *)     &pack_encoded[++j];
+  operatorID_enc = (ODID_OperatorID_encoded *) &pack_encoded[++j];
+  selfID_enc     = (ODID_SelfID_encoded *)     &pack_encoded[++j];
+  auth_enc[1]    = (ODID_Auth_encoded *)       &pack_encoded[++j];
+
+  encodeBasicIDMessage(basicID_enc[0],&UAS_data->BasicID[0]);
+  encodeBasicIDMessage(basicID_enc[1],&UAS_data->BasicID[1]);
+  encodeOperatorIDMessage(operatorID_enc,&UAS_data->OperatorID);
+  encodeSelfIDMessage(selfID_enc,&UAS_data->SelfID);
+  encodeAuthMessage(auth_enc[0],&UAS_data->Auth[0]);
+#if 0
+  encodeLocationMessage(location_enc,&UAS_data->Location);
+  encodeSystemMessage(system_enc,&UAS_data->System);
 #endif
 
   bt5_advert      = NULL;
@@ -138,12 +156,14 @@ int RID_open::begin(const struct gpio_dt_spec *led,const char *name,ODID_UAS_Dat
 
   // The opendroneid app wants this first. Dronetag doesn't mind if it isn't.
   bt5_data[ext_records].type     = BT_DATA_SVC_DATA16;
-#if PACK_MESSAGES
-  bt5_data[ext_records].data_len = 29;
+#if ID_JAPAN
+  bt5_data[ext_records].data_len = 7 + (4 * ODID_MESSAGE_SIZE);
+  bt5_data[ext_records].data     = pack_buffer;
+  pack_buffer[6]                 = 4;
 #else
-  bt5_data[ext_records].data_len = 29;
-#endif
+  bt5_data[ext_records].data_len = 4 + ODID_MESSAGE_SIZE;
   bt5_data[ext_records].data     = bt4_adv_buffer;
+#endif
 
   bt5_data[++ext_records].type   = BT_DATA_FLAGS;
   bt5_data[ext_records].data_len = 1;
@@ -245,11 +265,16 @@ int RID_open::foreground(ODID_UAS_Data *UAS_data) {
     last_bt5_advert = msecs;
     ++counter_5;
 
-#if PACK_MESSAGES
-    update_message(&bt5_ad_phase,UAS_data);
+#if ID_JAPAN
+    ++*odid_seq_bt5;
+    encodeLocationMessage(location_enc,&UAS_data->Location);
+    encodeSystemMessage(system_enc,&UAS_data->System);
+    encodeAuthMessage(auth_enc[0],&UAS_data->Auth[0]);
+    auth_japan(pack_encoded,(uint8_t *) AUTH_IV);
 #else
     update_message(&bt5_ad_phase,UAS_data);
 #endif
+
     if (status = bt_le_ext_adv_set_data(bt5_advert,bt5_data,ext_records,NULL,0)) {
 
       sprintf(text,"RID_open::%s(): bt_le_ext_adv_set_data() returned %d",__func__,status);
@@ -279,34 +304,34 @@ int RID_open::update_message(int *_phase,ODID_UAS_Data *UAS_data) {
     case  0:
     case  3:
       index = 1;
-      encodeLocationMessage(&location_enc,&UAS_data->Location);
-      memcpy(odid_enc_bt4,&location_enc,ODID_MESSAGE_SIZE);
+      encodeLocationMessage(location_enc,&UAS_data->Location);
+      memcpy(odid_enc_bt4,location_enc,ODID_MESSAGE_SIZE);
       break;
 
     case  1:
     case  4:
       index = 2;
-      encodeSystemMessage(&system_enc,&UAS_data->System);
-      memcpy(odid_enc_bt4,&system_enc,ODID_MESSAGE_SIZE);
+      encodeSystemMessage(system_enc,&UAS_data->System);
+      memcpy(odid_enc_bt4,system_enc,ODID_MESSAGE_SIZE);
       break;
 
     case 2:
-      if (operatorID_enc.OperatorId[0]) {
+      if (operatorID_enc->OperatorId[0]) {
         index = 3;
-        memcpy(odid_enc_bt4,&operatorID_enc,ODID_MESSAGE_SIZE);
+        memcpy(odid_enc_bt4,operatorID_enc,ODID_MESSAGE_SIZE);
       }
       break;
 
     case 5:
       index = 4;
-      memcpy(odid_enc_bt4,&basicID_enc[0],ODID_MESSAGE_SIZE);
+      memcpy(odid_enc_bt4,basicID_enc[0],ODID_MESSAGE_SIZE);
       break;
 
     default:
-      if (selfID_enc.Desc) {
+      if (selfID_enc->Desc) {
         index = 5;
-        encodeSelfIDMessage(&selfID_enc,&UAS_data->SelfID);
-        memcpy(odid_enc_bt4,&selfID_enc,ODID_MESSAGE_SIZE);
+        encodeSelfIDMessage(selfID_enc,&UAS_data->SelfID); // Because we sometimes use selfID for diagnostics.
+        memcpy(odid_enc_bt4,selfID_enc,ODID_MESSAGE_SIZE);
       }
       phase = 0;
       break;
