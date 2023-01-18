@@ -30,7 +30,7 @@
 
                         // 01234567890123456789
 #define UAV_OPERATOR      "GBR-OP-ABCD12345678"      // "GBR-OP-ABCD12345678"
-#define UAV_ID            "ZZZZH12345678"            // "ZZZZH12345678"
+#define UAV_ID            "~"                        // "ZZZZH12345678", ~ => random generated
 #define SELF_ID           "CAA UAS 7068"
 #define UA_TYPE           ODID_UATYPE_AEROPLANE      // ODID_UATYPE_NONE
 
@@ -45,14 +45,18 @@
 #define SPEKTRUM          0
 #define REQ_SATS          8 // 8 for real use, 5 for indoor testing.
 
+// Chose one or none.
 #define ID_JAPAN          0
+#define ID_USA            0
+
+//
 
 void      txt_message(const char *);   // Packages the message into a NMEA TXT.
 void      txt_message(const char *,const int,const int,const int);
 void      debug_message(const char *);
 int       crypto_init(uint8_t *);
 #if ID_JAPAN
-int       auth_japan(ODID_Message_encoded *,uint8_t *);
+int       auth_japan(ODID_UAS_Data *,ODID_Message_encoded *,uint8_t *);
 #endif
 
 #ifdef __cplusplus

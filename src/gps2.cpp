@@ -354,7 +354,7 @@ int GPS2::foreground() {
 
   if ((msecs - last_config) > 249) {
     
-    if(config_phase < CONFIG_PHASES) {
+    if (config_phase < CONFIG_PHASES) {
       configure(0);
     }
 #if 0
@@ -363,6 +363,12 @@ int GPS2::foreground() {
 #endif
   }
 
+  if ((config_phase >= CONFIG_PHASES)&&
+      ((msecs - last_nmea)   > 9999)&&
+      ((msecs - last_config) > 4999)) {
+    configure(1);
+  }
+  
   return 0;
 }
 
@@ -400,7 +406,7 @@ int GPS2::txt_message(const char *text,
     uart_poll_out(gps_dev,tx_buffer[i]);
 #endif
   }
-  
+
   return 0;
 }
 
@@ -423,7 +429,7 @@ void GPS2::reset_flags() {
 int GPS2::configure(int override) {
 
   int                rate;
-  char               text[128], text2[64];
+  char               text[128];
   uint32_t           msecs;
   struct {char    msg_name[4];
           uint8_t msg_class; 
@@ -460,6 +466,7 @@ int GPS2::configure(int override) {
   switch (config_phase) {
 
   case  1:
+    set_uart_baud(gps_dev,9600);
     break;
 
   case  2:
@@ -528,16 +535,7 @@ int GPS2::configure(int override) {
 
     k_sleep(K_MSEC(50));
 
-    uart_irq_rx_disable(gps_dev);
-    status3 = uart_config_get(gps_dev,&serial_config);
-    serial_config.baudrate = BAUD_RATE;
-    status4 = uart_configure(gps_dev,&serial_config);
-    uart_irq_rx_enable(gps_dev);
-    uart_config_get(gps_dev,&serial_config);
-
-    sprintf(text2,"uart_configure(%d): %d, %d",
-            BAUD_RATE,status4,serial_config.baudrate);;
-    txt_message(text2);
+    set_uart_baud(gps_dev,BAUD_RATE);
     break;
     
   case 36:
@@ -553,6 +551,28 @@ int GPS2::configure(int override) {
   }
   
   return config_phase;
+}
+
+//
+
+void GPS2::set_uart_baud(device *uart,int baud_rate) {
+
+  char text[128];
+  
+  uart_irq_rx_disable(uart);
+
+  status3 = uart_config_get(uart,&serial_config);
+  serial_config.baudrate = baud_rate;
+  status4 = uart_configure(uart,&serial_config);
+
+  uart_irq_rx_enable(uart);
+  uart_config_get(uart,&serial_config);
+
+  sprintf(text,"GPS2::%s(%d): %d, %d",__func__,
+          baud_rate,status4,serial_config.baudrate);;
+  txt_message(text);
+
+  return;
 }
 
 /*

@@ -29,6 +29,8 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/hci.h>
 
+#include <zephyr/random/rand32.h>
+
 #include "gps2.h"
 #include "odid_bt.h"
 #if SPEKTRUM
@@ -36,10 +38,11 @@
 #endif
 
 //
+
 static const char                 uav_operator[] = UAV_OPERATOR,
-                                  uav_id[]       = UAV_ID,
                                   self_id[]      = SELF_ID,
                                  *program_name   = "Remote ID";
+static char                       uav_id[25]     = UAV_ID;
 static const ODID_uatype_t        ua_type        = UA_TYPE;
 static const ODID_category_EU_t   category       = EU_CATEGORY;
 
@@ -72,7 +75,7 @@ static int                        time_set = 0;
 #endif
 static int                        base_set = 0, build_report = 0;
 
-static void init_odid(const char *,const char *,const char *);
+static void init_odid(const char *,char *,const char *);
 
 /*
  *
@@ -266,8 +269,9 @@ void debug_message(const char *message) {
  *
  */
 
-static void init_odid(const char *uav_op,const char *uav,const char *self) {
+static void init_odid(const char *uav_op,char *uav,const char *self) {
 
+  uint32_t            sn1, sn2;
   ODID_Location_data *location;
   ODID_System_data   *system;
 
@@ -275,6 +279,16 @@ static void init_odid(const char *uav_op,const char *uav,const char *self) {
 
   location = &UAS_data.Location;
   system   = &UAS_data.System;
+
+  //
+
+  if (uav[0] == '~') {
+
+    sn1 = sys_rand32_get() % 1000000;
+    sn2 = sys_rand32_get() % 1000000;
+
+    sprintf(uav,"ZZZZL%06u%06u",sn1,sn2);
+  }
 
   //
 
@@ -287,6 +301,9 @@ static void init_odid(const char *uav_op,const char *uav,const char *self) {
 
   UAS_data.BasicID[1].IDType = ODID_IDTYPE_CAA_REGISTRATION_ID;
   strncpy(UAS_data.BasicID[1].UASID,uav_op,ODID_ID_SIZE);
+
+  UAS_data.Auth[0].AuthType  = ODID_AUTH_MESSAGE_SET_SIGNATURE;
+  UAS_data.Auth[0].Length    = 17;
 #else
   if (uav[0]) {
     UAS_data.BasicID[0].IDType = ODID_IDTYPE_SERIAL_NUMBER;
@@ -309,23 +326,26 @@ static void init_odid(const char *uav_op,const char *uav,const char *self) {
   location->TSAccuracy         = ODID_TIME_ACC_1_5_SECOND;
 
   system->OperatorLocationType = ODID_OPERATOR_LOCATION_TYPE_TAKEOFF;
-  system->ClassificationType   = ODID_CLASSIFICATION_TYPE_EU;
   system->AreaCount            = 1;
   system->AreaRadius           = 500;
   system->AreaCeiling          =
   system->AreaFloor            = -1000.0;
   system->OperatorAltitudeGeo  = -1000.0;
 
+#if ! (ID_USA || ID_JAPAN)
   if (category) {
     system->ClassificationType = ODID_CLASSIFICATION_TYPE_EU;
     system->CategoryEU         = category;
     system->ClassEU            = ODID_CLASS_EU_UNDECLARED;
   }
+#endif
 
+#if ! ID_USA
   if (uav_op[0]) {
     UAS_data.OperatorID.OperatorIdType = ODID_OPERATOR_ID;
     strncpy(UAS_data.OperatorID.OperatorId,uav_op,ODID_ID_SIZE);
   }
+#endif
 
   if (self[0]) {
     UAS_data.SelfID.DescType   = ODID_DESC_TYPE_TEXT;

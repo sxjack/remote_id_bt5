@@ -66,6 +66,7 @@ class GPS2 {
 
   int                   send(const uint8_t *,int);
   int                   configure(int);
+  void                  set_uart_baud(device *,int);
   int                   parse_nmea(int);
   int                   parse_ublox(void);
   int                   nmea_command(const char *);

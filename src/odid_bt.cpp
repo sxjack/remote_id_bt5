@@ -269,8 +269,7 @@ int RID_open::foreground(ODID_UAS_Data *UAS_data) {
     ++*odid_seq_bt5;
     encodeLocationMessage(location_enc,&UAS_data->Location);
     encodeSystemMessage(system_enc,&UAS_data->System);
-    encodeAuthMessage(auth_enc[0],&UAS_data->Auth[0]);
-    auth_japan(pack_encoded,(uint8_t *) AUTH_IV);
+    auth_japan(UAS_data,pack_encoded,(uint8_t *) AUTH_IV);
 #else
     update_message(&bt5_ad_phase,UAS_data);
 #endif
@@ -316,10 +315,15 @@ int RID_open::update_message(int *_phase,ODID_UAS_Data *UAS_data) {
       break;
 
     case 2:
+#if ID_JAPAN
+      index = 6;
+      memcpy(odid_enc_bt4,basicID_enc[1],ODID_MESSAGE_SIZE);
+#else
       if (operatorID_enc->OperatorId[0]) {
         index = 3;
         memcpy(odid_enc_bt4,operatorID_enc,ODID_MESSAGE_SIZE);
       }
+#endif
       break;
 
     case 5:
@@ -330,8 +334,8 @@ int RID_open::update_message(int *_phase,ODID_UAS_Data *UAS_data) {
     default:
       if (selfID_enc->Desc) {
         index = 5;
-        encodeSelfIDMessage(selfID_enc,&UAS_data->SelfID); // Because we sometimes use selfID for diagnostics.
-        memcpy(odid_enc_bt4,selfID_enc,ODID_MESSAGE_SIZE);
+        encodeSelfIDMessage(selfID_enc,&UAS_data->SelfID); // Because we sometimes use selfID 
+        memcpy(odid_enc_bt4,selfID_enc,ODID_MESSAGE_SIZE); // for diagnostics.
       }
       phase = 0;
       break;
