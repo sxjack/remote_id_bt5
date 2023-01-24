@@ -1,0 +1,89 @@
+/* -*- tab-width: 4; mode: c; -*-
+ *
+ * Overlay for the Xiao nRF52.
+ *
+ */
+
+/ {
+	zephyr,user {
+		io-channels = <&adc 0>, <&adc 1>, <&adc 7>;
+	};
+
+	gpio_custom {
+	  compatible = "gpio-leds";
+	  read_bat: read_bat {
+		gpios = <&gpio0 14 GPIO_ACTIVE_LOW>;
+		label = "READ BAT";
+	  };
+	};
+
+	aliases {
+	  readbat = &read_bat;
+	};
+};
+
+&zephyr_udc0 {
+	cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+};
+
+&adc {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	channel@0 {
+		reg = <0>;
+		zephyr,gain = "ADC_GAIN_1_6";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,input-positive = <NRF_SAADC_AIN1>; /* P0.03 */
+		zephyr,resolution = <12>;
+	};
+
+	channel@1 {
+		reg = <1>;
+		zephyr,gain = "ADC_GAIN_1_6";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,input-positive = <NRF_SAADC_VDD>;
+		zephyr,resolution = <14>;
+		zephyr,oversampling = <8>;
+	};
+
+	channel@7 {
+		reg = <7>;
+		zephyr,gain = "ADC_GAIN_1_6";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,input-positive = <NRF_SAADC_AIN7>; /* P0.31 */
+		zephyr,resolution = <12>;
+	};
+};
+
+/*
+ * Overlay for TWI/IC2 Zephyr NCS implementation with nRFx TWIS Driver
+ * Line references are used in the blog post and twis_node.txt
+ */
+
+&i2c1 {
+
+  status = "disabled";
+  sda-pin = <4>;
+  scl-pin = <5>;
+  interrupts = < 0x4 0x2 >;
+
+  twis_device1:nRF52804@12 {
+	label = "i2c nRF52840 addr a";
+	reg = <0x12>;
+  };
+
+  twis_device2: nRF52840@0 {
+	label = "i2c nRF52840 addr b";
+	reg = <0x00>;
+  };
+};
+
+&spi1 {
+  status = "disabled";
+};
