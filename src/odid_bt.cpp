@@ -30,6 +30,11 @@
 #define BT5_INT       170
 #endif
 
+const uint8_t RID_open::odid_uuid_h = 0xff;
+const uint8_t RID_open::odid_uuid_l = 0xfa;
+const uint8_t RID_open::batt_uuid_h = 0x2b;
+const uint8_t RID_open::batt_uuid_l = 0xf0;
+
 /*
  *
  */
@@ -53,16 +58,23 @@ int RID_open::begin(const struct gpio_dt_spec *led,const char *name,ODID_UAS_Dat
   //
 
   memset(pack_buffer,0,sizeof(pack_buffer));
+  memset(batt_buffer,0,sizeof(batt_buffer));
 
-  pack_buffer[0] = 0xfa;
-  pack_buffer[1] = 0xff;
+  pack_buffer[0] = odid_uuid_l;
+  pack_buffer[1] = odid_uuid_h;
   pack_buffer[2] = 0x0d;
   odid_seq_bt5   = &pack_buffer[3];
   pack_buffer[4] = (ODID_MESSAGETYPE_PACKED << 4) | 0x02;
   pack_buffer[5] =  ODID_MESSAGE_SIZE;
   pack_buffer[6] = 7;
   pack_encoded   = (ODID_Message_encoded *)    &pack_buffer[7];
-  // The order is for ID_JAPAN. Different orders would require a #define block.
+
+  batt_buffer[0] = batt_uuid_l;
+  batt_buffer[1] = batt_uuid_h;
+  batt_buffer[2] = 0x0d;
+  batt_buffer[3] = 0x02;
+
+  // This order is for ID_JAPAN. Different orders would require a #define block.
   basicID_enc[0] = (ODID_BasicID_encoded *)    &pack_encoded[j = 0];
   basicID_enc[1] = (ODID_BasicID_encoded *)    &pack_encoded[++j];
   location_enc   = (ODID_Location_encoded *)   &pack_encoded[++j];
@@ -85,7 +97,7 @@ int RID_open::begin(const struct gpio_dt_spec *led,const char *name,ODID_UAS_Dat
   bt5_advert      = NULL;
 
   counter_4       =
-  counter_4       = 0;
+  counter_5       = 0;
   bt4_ad_phase    =
   bt5_ad_phase    = 0;
   last_bt4_advert = k_uptime_get_32();
@@ -100,8 +112,8 @@ int RID_open::begin(const struct gpio_dt_spec *led,const char *name,ODID_UAS_Dat
   memset(bt5_data,      0,sizeof(bt5_data));
   memset(ext_adv_info,  0,sizeof(struct bt_le_ext_adv_info));
 
-  bt4_adv_buffer[0] = 0xfa;
-  bt4_adv_buffer[1] = 0xff;
+  bt4_adv_buffer[0] = odid_uuid_l;
+  bt4_adv_buffer[1] = odid_uuid_h;
   bt4_adv_buffer[2] = 0x0d;
 
   odid_seq_bt4 = &bt4_adv_buffer[3];
@@ -132,7 +144,7 @@ int RID_open::begin(const struct gpio_dt_spec *led,const char *name,ODID_UAS_Dat
 
   bt4_adv_param.id           = BT_ID_DEFAULT;
   bt4_adv_param.sid          = 0;
-  bt4_adv_param.options      = BT_LE_ADV_OPT_NONE;
+  bt4_adv_param.options      = BT_LE_ADV_OPT_USE_IDENTITY; // BT_LE_ADV_OPT_NONE
   bt4_adv_param.interval_min = BT_GAP_ADV_FAST_INT_MIN_2;
   bt4_adv_param.interval_max = BT_GAP_ADV_FAST_INT_MAX_2;
 
@@ -144,15 +156,17 @@ int RID_open::begin(const struct gpio_dt_spec *led,const char *name,ODID_UAS_Dat
   
   bt5_adv_param.id           = BT_ID_DEFAULT;
   bt5_adv_param.sid          = 1;
-  bt5_adv_param.options      = BT_LE_ADV_OPT_EXT_ADV | BT_LE_ADV_OPT_CODED;
+  bt5_adv_param.options      = BT_LE_ADV_OPT_USE_IDENTITY |
+                               BT_LE_ADV_OPT_EXT_ADV | BT_LE_ADV_OPT_CODED;
+  // bt5_adv_param.options      = BT_LE_ADV_OPT_EXT_ADV;
   bt5_adv_param.interval_min = BT_GAP_ADV_FAST_INT_MIN_2;
   bt5_adv_param.interval_max = BT_GAP_ADV_FAST_INT_MAX_2;
 
   bt_data_flags  = BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR;
   ext_records    = 0;
 
-  bt_uuid[j = 0] = 0xfa;
-  bt_uuid[++j]   = 0xff;
+  bt_uuid[j = 0] = odid_uuid_l;
+  bt_uuid[++j]   = odid_uuid_h;
 
   // The opendroneid app wants this first. Dronetag doesn't mind if it isn't.
   bt5_data[ext_records].type     = BT_DATA_SVC_DATA16;
@@ -164,15 +178,20 @@ int RID_open::begin(const struct gpio_dt_spec *led,const char *name,ODID_UAS_Dat
   bt5_data[ext_records].data_len = 4 + ODID_MESSAGE_SIZE;
   bt5_data[ext_records].data     = bt4_adv_buffer;
 #endif
-
   bt5_data[++ext_records].type   = BT_DATA_FLAGS;
   bt5_data[ext_records].data_len = 1;
   bt5_data[ext_records].data     = &bt_data_flags;
+#if BATT_VOLTS
+  bt5_data[++ext_records].type   = BT_DATA_SVC_DATA16;
+  bt5_data[ext_records].data_len = 6;
+  bt5_data[ext_records].data     = batt_buffer;
+#endif
 #if 0
   bt5_data[++ext_records].type   = BT_DATA_UUID16_ALL;
   bt5_data[ext_records].data_len = j + 1;
   bt5_data[ext_records].data     = bt_uuid;
-  
+#endif
+#if 0
   bt5_data[++ext_records].type   = BT_DATA_NAME_COMPLETE;
   bt5_data[ext_records].data_len = strlen(name);
   bt5_data[ext_records].data     = (const uint8_t *) name;
@@ -265,6 +284,12 @@ int RID_open::foreground(ODID_UAS_Data *UAS_data) {
     last_bt5_advert = msecs;
     ++counter_5;
 
+#if BATT_VOLTS
+    batt_volt.f16  = (__fp16) battery_voltage();
+    batt_buffer[4] = (uint8_t)  batt_volt.u16;
+    batt_buffer[5] = (uint8_t) (batt_volt.u16 >> 8);  
+#endif
+
 #if ID_JAPAN
     ++*odid_seq_bt5;
     encodeLocationMessage(location_enc,&UAS_data->Location);
@@ -332,7 +357,7 @@ int RID_open::update_message(int *_phase,ODID_UAS_Data *UAS_data) {
       break;
 
     default:
-      if (selfID_enc->Desc) {
+      if (selfID_enc->Desc[0]) {
         index = 5;
         encodeSelfIDMessage(selfID_enc,&UAS_data->SelfID); // Because we sometimes use selfID 
         memcpy(odid_enc_bt4,selfID_enc,ODID_MESSAGE_SIZE); // for diagnostics.

@@ -55,19 +55,21 @@ static Spektrum_I2C               spektrum;
 #endif
 
 static ODID_UAS_Data              UAS_data;
-const uint64_t                    odid_datum  = 1546300800;
+const uint64_t                    odid_datum     = 1546300800;
 
-static const struct device       *usb_ser_dev = DEVICE_DT_GET_ONE(zephyr_cdc_acm_uart),
-                                 *uart_dev    = DEVICE_DT_GET(DT_NODELABEL(uart0));
-#if DONGLE // nRF52840 dongle
-static const struct gpio_dt_spec  led_green   = GPIO_DT_SPEC_GET(DT_ALIAS(led0_green),gpios);
-static const struct gpio_dt_spec  led_red     = GPIO_DT_SPEC_GET(DT_ALIAS(led1_red),gpios);
-static const struct gpio_dt_spec  led_green1  = GPIO_DT_SPEC_GET(DT_ALIAS(led1_green),gpios);
-static const struct gpio_dt_spec  led_blue    = GPIO_DT_SPEC_GET(DT_ALIAS(led1_blue),gpios);
+static const struct device       *usb_ser_dev    = DEVICE_DT_GET_ONE(zephyr_cdc_acm_uart),
+                                 *uart_dev       = DEVICE_DT_GET(DT_NODELABEL(uart0));
+#if defined(CONFIG_BOARD_NRF52840DONGLE_NRF52840)
+const char                        config_board[] = "nrf52840 dongle";
+static const struct gpio_dt_spec  led_green      = GPIO_DT_SPEC_GET(DT_ALIAS(led0_green),gpios);
+static const struct gpio_dt_spec  led_red        = GPIO_DT_SPEC_GET(DT_ALIAS(led1_red),gpios);
+static const struct gpio_dt_spec  led_green1     = GPIO_DT_SPEC_GET(DT_ALIAS(led1_green),gpios);
+static const struct gpio_dt_spec  led_blue       = GPIO_DT_SPEC_GET(DT_ALIAS(led1_blue),gpios);
 #else
-static const struct gpio_dt_spec  led_red     = GPIO_DT_SPEC_GET(DT_ALIAS(led0),gpios);
-static const struct gpio_dt_spec  led_green   = GPIO_DT_SPEC_GET(DT_ALIAS(led1),gpios);
-static const struct gpio_dt_spec  led_blue    = GPIO_DT_SPEC_GET(DT_ALIAS(led2),gpios);
+const char                        config_board[] = "nrf52";
+static const struct gpio_dt_spec  led_red        = GPIO_DT_SPEC_GET(DT_ALIAS(led0),gpios);
+static const struct gpio_dt_spec  led_green      = GPIO_DT_SPEC_GET(DT_ALIAS(led1),gpios);
+static const struct gpio_dt_spec  led_blue       = GPIO_DT_SPEC_GET(DT_ALIAS(led2),gpios);
 #endif
 
 #if 0
@@ -83,12 +85,16 @@ static void init_odid(const char *,char *,const char *);
 
 int main(void) {
 
-  int                       status, toggle_period, heading;
+  int                       status, heading;
   char                      text[128];
   float                     speed, height;
-  uint32_t                  uptime, last_toggle = 0;
+  uint32_t                  uptime;
   uint64_t                  unix_secs;
   struct bt_le_ext_adv_info ext_adv_info;
+#if 0
+  int                       toggle_period;
+  uint32_t                  last_toggle = 0;
+#endif
 
   //
 
@@ -98,9 +104,11 @@ int main(void) {
   
   gpio_pin_configure_dt(&led_green,GPIO_OUTPUT_ACTIVE);
   gpio_pin_set_dt(&led_green,0);
-  
-  if (status = usb_enable(NULL)) {
 
+  // On the xiao_ble, this may return an error because the USB has been
+  // enabled earlier.
+
+  if (status = usb_enable(NULL)) {
     sprintf(text,"%s(): usb_enable() returned %d",__func__,status);
     printk("%s\n",text);
   }
@@ -148,6 +156,7 @@ int main(void) {
     UAS_data.Location.TimeStamp = (gps.utc.tm_min * 60) + gps.utc.tm_sec;
 
     if (gps.satellites >= REQ_SATS) {
+      gpio_pin_set_dt(&led_green,1);
 
       UAS_data.Location.Status      = ODID_STATUS_UNDECLARED;
       UAS_data.Location.Latitude    = gps.latitude_d;
@@ -171,6 +180,7 @@ int main(void) {
       sprintf(UAS_data.SelfID.Desc,"%5u %5u ",gps.speed_2d_cm,gps.speed_3d_cm);
 #endif
     } else {
+      gpio_pin_set_dt(&led_green,0);
 
       UAS_data.Location.Status    = ODID_STATUS_REMOTE_ID_SYSTEM_FAILURE;
     }
@@ -199,23 +209,25 @@ int main(void) {
 
     k_sleep(K_MSEC(5));
 
-    uptime        = k_uptime_get_32();
-    toggle_period = 1200 - (gps.satellites * 50);
+    uptime = k_uptime_get_32();
 
     if ((!build_report)&&(uptime > 20000)) {
 
-      sprintf(text,"%s %s, %d dbm",
-              program_name,__DATE__,(int) ext_adv_info.tx_power);
+      sprintf(text,"%s %s, %s, %d dbm",
+              program_name,__DATE__,config_board,(int) ext_adv_info.tx_power);
       txt_message(text);
 
       build_report = 1;
     }
+#if 0
+    toggle_period = 1200 - (gps.satellites * 50);
 
     if ((uptime - last_toggle) > toggle_period) {
 
       last_toggle = uptime;  
       gpio_pin_toggle_dt(&led_green);
     }
+#endif
 
 #if not GPS_PASSTHROUGH
     sprintf(text,"\r %8u %6u %1d %6u %1d %3d %3d %3d ",

@@ -47,13 +47,19 @@ class RID_open {
   int                       update_message(int *,ODID_UAS_Data *UAS_data);
 
   int                       ext_records = 0;
-  uint8_t                   pack_buffer[256];
+  uint8_t                   pack_buffer[256], batt_buffer[8];
   uint8_t                  *odid_enc_bt4, *odid_seq_bt4, bt4_adv_buffer[36], *odid_seq_bt5;
   uint32_t                  last_bt4_advert = 0, last_bt5_advert = 0;
   struct gpio_dt_spec      *status_led;
   struct bt_le_adv_param    bt4_adv_param, bt5_adv_param;
   struct bt_data            bt4_data[2], bt5_data[5];         
   struct bt_le_ext_adv     *bt5_advert;
+#if BATT_VOLTS
+  union {__fp16   f16;
+         uint16_t u16;}     batt_volt;
+#endif
+
+  static const uint8_t      odid_uuid_l, odid_uuid_h, batt_uuid_l, batt_uuid_h;
 
   ODID_Message_encoded     *pack_encoded   =  NULL;
   ODID_BasicID_encoded     *basicID_enc[2] = {NULL, NULL};
