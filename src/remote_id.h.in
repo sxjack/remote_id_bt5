@@ -42,8 +42,9 @@
 #define GPS_PASSTHROUGH   1
 #define TXT_BOTH_PORTS    0 // Sends error messages to both the serial and USB ports.
 #define SPEKTRUM          ${spektrum}
-#define REQ_SATS          5 // 8 for real use, 5 for indoor testing.
+#define REQ_SATS          8 // 8 for real use, 5 for indoor testing.
 #define BATT_VOLTS        ${batt_volts}
+#define STATIC_BLE_MAC    1
 
 // National/regional variations.
 #define ID_JAPAN          ${id_japan}

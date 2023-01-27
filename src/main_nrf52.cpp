@@ -78,6 +78,7 @@ static int                        time_set = 0;
 static int                        base_set = 0, build_report = 0;
 
 static void init_odid(const char *,char *,const char *);
+static void status_leds(uint32_t,uint32_t,int,int);
 
 /*
  *
@@ -91,19 +92,10 @@ int main(void) {
   uint32_t                  uptime;
   uint64_t                  unix_secs;
   struct bt_le_ext_adv_info ext_adv_info;
-#if 0
-  int                       toggle_period;
-  uint32_t                  last_toggle = 0;
-#endif
 
   //
 
   init_odid(uav_operator,uav_id,self_id);
-
-  //
-  
-  gpio_pin_configure_dt(&led_green,GPIO_OUTPUT_ACTIVE);
-  gpio_pin_set_dt(&led_green,0);
 
   // On the xiao_ble, this may return an error because the USB has been
   // enabled earlier.
@@ -156,7 +148,6 @@ int main(void) {
     UAS_data.Location.TimeStamp = (gps.utc.tm_min * 60) + gps.utc.tm_sec;
 
     if (gps.satellites >= REQ_SATS) {
-      gpio_pin_set_dt(&led_green,1);
 
       UAS_data.Location.Status      = ODID_STATUS_UNDECLARED;
       UAS_data.Location.Latitude    = gps.latitude_d;
@@ -180,7 +171,6 @@ int main(void) {
       sprintf(UAS_data.SelfID.Desc,"%5u %5u ",gps.speed_2d_cm,gps.speed_3d_cm);
 #endif
     } else {
-      gpio_pin_set_dt(&led_green,0);
 
       UAS_data.Location.Status    = ODID_STATUS_REMOTE_ID_SYSTEM_FAILURE;
     }
@@ -211,6 +201,8 @@ int main(void) {
 
     uptime = k_uptime_get_32();
 
+    status_leds(uptime,gps.last_ublox,gps.satellites,gps.fix);
+
     if ((!build_report)&&(uptime > 20000)) {
 
       sprintf(text,"%s %s, %s, %d dbm",
@@ -219,15 +211,6 @@ int main(void) {
 
       build_report = 1;
     }
-#if 0
-    toggle_period = 1200 - (gps.satellites * 50);
-
-    if ((uptime - last_toggle) > toggle_period) {
-
-      last_toggle = uptime;  
-      gpio_pin_toggle_dt(&led_green);
-    }
-#endif
 
 #if not GPS_PASSTHROUGH
     sprintf(text,"\r %8u %6u %1d %6u %1d %3d %3d %3d ",
@@ -373,6 +356,81 @@ static void init_odid(const char *uav_op,char *uav,const char *self) {
  *
  */
 
+#define STATUS_LED DT_N_ALIAS_statusled
+ 
+ void status_leds(uint32_t uptime,uint32_t last_gps,int sats,int fix) {
+
+  static int                 phase = -1;
+  static uint32_t            last_update = 0;
+#if defined(STATUS_LED)
+  static struct gpio_dt_spec external_led = GPIO_DT_SPEC_GET(DT_ALIAS(statusled),gpios);
+#endif
+
+  if (phase < 0) {
+
+    gpio_pin_configure_dt(&led_green,GPIO_OUTPUT_ACTIVE);
+    gpio_pin_set_dt(&led_green,0);
+#if defined(STATUS_LED)
+    gpio_pin_configure_dt(&external_led,GPIO_OUTPUT_ACTIVE);
+    gpio_pin_set_dt(&external_led,0);
+#endif
+    phase = 0;
+  }
+
+  if ((uptime - last_update) < 100) {
+    return;
+  }
+
+  last_update = uptime;
+
+  switch (phase) {
+
+  case 0:
+    if ((uptime - last_gps) < 2000) {
+      gpio_pin_set_dt(&led_green,1);
+#if defined(STATUS_LED)
+      gpio_pin_set_dt(&external_led,1);
+#endif
+    }
+    break;
+
+  case  6:
+  case  8:
+  case 10:
+  case 12:
+  case 14:
+    gpio_pin_set_dt(&led_green,0);
+#if defined(STATUS_LED)
+      gpio_pin_set_dt(&external_led,0);
+#endif
+    break;
+
+  case  9:
+    if (sats > 3) {
+      gpio_pin_set_dt(&led_green,1);
+#if defined(STATUS_LED)
+      gpio_pin_set_dt(&external_led,1);
+#endif
+    }
+    break;
+
+  case 11:
+    if (sats > 9) {
+      gpio_pin_set_dt(&led_green,1);
+#if defined(DT_N_ALIAS_statusled)
+      gpio_pin_set_dt(&external_led,1);
+#endif
+    }
+    break;
+  }
+
+  if (++phase > 19) {
+    phase = 0;
+  }
+
+  return;
+}
+ 
 /*
  *
  */

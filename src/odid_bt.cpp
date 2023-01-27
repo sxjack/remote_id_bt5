@@ -144,7 +144,10 @@ int RID_open::begin(const struct gpio_dt_spec *led,const char *name,ODID_UAS_Dat
 
   bt4_adv_param.id           = BT_ID_DEFAULT;
   bt4_adv_param.sid          = 0;
-  bt4_adv_param.options      = BT_LE_ADV_OPT_USE_IDENTITY; // BT_LE_ADV_OPT_NONE
+  bt4_adv_param.options      = BT_LE_ADV_OPT_NONE;
+#if STATIC_BLE_MAC
+  bt4_adv_param.options     |= BT_LE_ADV_OPT_USE_IDENTITY;
+#endif
   bt4_adv_param.interval_min = BT_GAP_ADV_FAST_INT_MIN_2;
   bt4_adv_param.interval_max = BT_GAP_ADV_FAST_INT_MAX_2;
 
@@ -156,8 +159,10 @@ int RID_open::begin(const struct gpio_dt_spec *led,const char *name,ODID_UAS_Dat
   
   bt5_adv_param.id           = BT_ID_DEFAULT;
   bt5_adv_param.sid          = 1;
-  bt5_adv_param.options      = BT_LE_ADV_OPT_USE_IDENTITY |
-                               BT_LE_ADV_OPT_EXT_ADV | BT_LE_ADV_OPT_CODED;
+  bt5_adv_param.options      = BT_LE_ADV_OPT_EXT_ADV | BT_LE_ADV_OPT_CODED;
+#if STATIC_BLE_MAC
+  bt5_adv_param.options     |= BT_LE_ADV_OPT_USE_IDENTITY;
+#endif
   // bt5_adv_param.options      = BT_LE_ADV_OPT_EXT_ADV;
   bt5_adv_param.interval_min = BT_GAP_ADV_FAST_INT_MIN_2;
   bt5_adv_param.interval_max = BT_GAP_ADV_FAST_INT_MAX_2;

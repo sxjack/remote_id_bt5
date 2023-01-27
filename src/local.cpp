@@ -40,12 +40,14 @@
 #warning "CRYPTO_DRV_NAME not set"
 #endif
 
+static uint32_t              crypto_dev_flags = 0;
+static const struct device  *crypto_dev = NULL;
+#if ID_JAPAN
+static struct cipher_ctx     japan_ctx;
 static const int             japan_key_len    = 16, //
                              japan_nonce_len  = 12, // Specification 3.(2)
                              japan_tag_len    = 12; //
-static uint32_t              crypto_dev_flags = 0;
-static const struct device  *crypto_dev = NULL;
-static struct cipher_ctx     japan_ctx;
+#endif
 
 /*
  *
@@ -56,6 +58,7 @@ int crypto_init(uint8_t *key) {
   int  status = 0;
   char text[128];
 
+#if ID_JAPAN
   memset(&japan_ctx,0,sizeof(japan_ctx));
 
   japan_ctx.keylen                         = japan_key_len;
@@ -63,6 +66,7 @@ int crypto_init(uint8_t *key) {
   japan_ctx.mode_params.ccm_info.tag_len   = japan_tag_len;
   japan_ctx.mode_params.ccm_info.nonce_len = japan_nonce_len;
   japan_ctx.flags                          = CAP_RAW_KEY | CAP_SYNC_OPS | CAP_SEPARATE_IO_BUFS;
+#endif
 
   if (!(crypto_dev = device_get_binding(CRYPTO_DRV_NAME))) {
     sprintf(text,"%s(): %s not found",__func__,CRYPTO_DRV_NAME);
@@ -71,7 +75,8 @@ int crypto_init(uint8_t *key) {
   }
 
   if (!device_is_ready(crypto_dev)) {
-    sprintf(text,"%s(): Crypto device %08x not ready",__func__,crypto_dev);
+    sprintf(text,"%s(): Crypto device %08x not ready",__func__,
+            (unsigned int) crypto_dev);
     txt_message(text,1,1,0);
     return -1;
   }
@@ -89,7 +94,7 @@ int crypto_init(uint8_t *key) {
 
 int auth_japan(ODID_UAS_Data *UAS_data,ODID_Message_encoded *messages_enc,uint8_t *iv) {
 
-  int                          i, j, status = 0, length = 0;
+  int                          j, status = 0, length = 0;
   const int                    max_cipher_len = 128;
   char                        *text;
   uint8_t                     *plain_text, cipher_text[160],
@@ -161,7 +166,7 @@ int auth_japan(ODID_UAS_Data *UAS_data,ODID_Message_encoded *messages_enc,uint8_
 
       } else {
 #if 0
-        for (i = 0; i < japan_tag_len; ++i) {
+        for (int i = 0; i < japan_tag_len; ++i) {
           sprintf(&text[i * 3],"%02x ",tag[i]);
         }
 

@@ -59,7 +59,9 @@ class GPS2 {
                         hdop_u = 0, vdop_u = 0;                                   // DOP
   int32_t               alt_msl_mm = 0,                                           // POSLLH
                         vel_N_cm = 0, vel_E_cm = 0, vel_D_cm = 0;                 // VELNED 
-  uint32_t              speed_3d_cm = 0, speed_2d_cm = 0;                         // VELNED
+  uint32_t              speed_3d_cm = 0, speed_2d_cm = 0,                         // VELNED
+                        last_nmea  = 0, nmea_messages  = 0, nmea_errors  = 0, 
+                        last_ublox = 0, ublox_messages = 0, ublox_errors = 0;
   struct tm             utc;                                                      // TIMEUTC
 
  private:
@@ -86,9 +88,7 @@ class GPS2 {
   int32_t               latitude_u = 0, longitude_u = 0,                          // POSLLH
                         heading_u = 0;                                            // VELNED
   uint16_t              nmea_checksum = 0, fg_index = 0;
-  uint32_t              last_config = 0,
-                        last_nmea  = 0, nmea_messages  = 0, nmea_errors  = 0, 
-                        last_ublox = 0, ublox_messages = 0, ublox_errors = 0;
+  uint32_t              last_config = 0;
   struct device        *gps_dev = NULL, *usb_dev = NULL;
   struct uart_config    serial_config;
   struct gpio_dt_spec  *status_led = NULL;
