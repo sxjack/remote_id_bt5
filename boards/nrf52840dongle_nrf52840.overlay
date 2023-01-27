@@ -9,6 +9,18 @@
 	zephyr,user {
 		io-channels = <&adc 0>, <&adc 1>, <&adc 7>;
 	};
+
+	gpio_custom {
+	  compatible = "gpio-leds";
+	  status_led: status_led {
+		gpios = <&gpio0 16 GPIO_ACTIVE_HIGH>;
+		label = "EXTERNAL LED";
+	  };
+	};
+
+	aliases {
+	  statusled = &status_led;
+	};
 };
 
 &zephyr_udc0 {

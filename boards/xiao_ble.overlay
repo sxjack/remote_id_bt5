@@ -15,10 +15,15 @@
 		gpios = <&gpio0 14 GPIO_ACTIVE_LOW>;
 		label = "READ BAT";
 	  };
+	  status_led: status_led {
+		gpios = <&gpio1 15 GPIO_ACTIVE_HIGH>;
+		label = "EXTERNAL LED";
+	  };
 	};
 
 	aliases {
 	  readbat = &read_bat;
+	  statusled = &status_led;
 	};
 };
 
