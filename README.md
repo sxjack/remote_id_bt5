@@ -36,8 +36,9 @@ There is an option to generate the [Japanese variation](https://www.mlit.go.jp/k
 
 The nRF52840 can be programmed to respond on two I2C addresses so I was going to add Spektrum telemetry sensor functionality to this program. Sadly, I can't get it to do this using SDK 2.2 (I can get it to work as an I2C slave using Arduino and the Adafruit libraries). There is a (pretty horrible) [example](https://devzone.nordicsemi.com/guides/nrf-connect-sdk-guides/b/peripherals/posts/twi-ic2-implementation-with-nrfx-twis-driver) for an earlier version of the SDK, but it won't compile with 2.2.
 
+## Photos
 
-
+![remote_ids](images/IMG_20230116_130022780_x.jpg)
 
 
 
