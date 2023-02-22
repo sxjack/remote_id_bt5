@@ -1,8 +1,10 @@
 # Remote ID
 
-A program for the nRF52840 that transmits opendroneid / ASTM F3411 / ASD-STAN 4709-002 UAV direct remote identification signals over Bluetooth 4 & 5 LR. 
+A program for the nRF52840 that transmits opendroneid / ASTM F3411 / ASD-STAN 4709-002 UAV direct remote identification (DRI) signals over Bluetooth 4 and 5.
 
 This was my first significant program using Zephyr. It may be my last :-).
+
+Unlikely to see any further development. I've come to the conclusion that it is easier to use WiFi beacon for DRI. If I could find a reasonably priced Android tablet that is good at receiving Bluetooth 5 coded, I might change my mind.
 
 ## Getting Started
 
